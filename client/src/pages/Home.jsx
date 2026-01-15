@@ -93,7 +93,7 @@ export default function Homepage() {
                             Become a Donor
                         </Link>
                         <Link
-                            to="/contact"
+                            to="/find-donors"
                             className="px-8 py-4 border-2 border-red-600 text-red-600 rounded-lg hover:bg-red-50"
                         >
                             Request Blood

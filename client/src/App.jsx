@@ -2,7 +2,9 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 /* PAGES */
+import FindDonorsPage from "./pages/FindDonors.jsx";
 import HomePage from "./pages/Home.jsx";
+import AboutPage from "./pages/About.jsx";
 import UserLogin from "./pages/UserLoginPage.jsx";
 import AdminLogin from "./pages/AdminLoginPage.jsx";
 import DonorRegistrationForm from "./pages/DonorRegistrationForm.jsx";
@@ -32,6 +34,9 @@ export default function App() {
 
                 {/* ADMIN */}
                 <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/find-donors" element={<FindDonorsPage />} />
+
 
                 {/* 404 */}
                 <Route
