@@ -6,6 +6,7 @@ import {
     Zap, Shield, Star, TrendingUp, Globe
 } from "lucide-react";
 import { useScrollReveal } from "../hooks/useScrollReveal";
+import { api, timeAgo } from "../lib/api";
 
 /* ─── Animated Counter ─── */
 function AnimatedCounter({ end, duration = 2000, suffix = "" }) {
@@ -44,19 +45,27 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }) {
 
 /* ─── Floating Blood Cells (decorative) ─── */
 function FloatingCells() {
+    // Random positions are generated once per mount so re-renders don't move the cells.
+    const [cells] = useState(() => [...Array(6)].map(() => ({
+        size: 20 + Math.random() * 60,
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        duration: 5 + Math.random() * 5,
+        delay: Math.random() * 3,
+    })));
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {[...Array(6)].map((_, i) => (
+            {cells.map((c, i) => (
                 <div
                     key={i}
                     className="absolute rounded-full opacity-10"
                     style={{
-                        width: `${20 + Math.random() * 60}px`,
-                        height: `${20 + Math.random() * 60}px`,
+                        width: `${c.size}px`,
+                        height: `${c.size}px`,
                         background: `radial-gradient(circle, rgba(220,38,38,0.6), rgba(220,38,38,0.1))`,
-                        left: `${Math.random() * 100}%`,
-                        top: `${Math.random() * 100}%`,
-                        animation: `float ${5 + Math.random() * 5}s ease-in-out ${Math.random() * 3}s infinite`,
+                        left: `${c.left}%`,
+                        top: `${c.top}%`,
+                        animation: `float ${c.duration}s ease-in-out ${c.delay}s infinite`,
                     }}
                 />
             ))}
@@ -67,17 +76,23 @@ function FloatingCells() {
 export default function Homepage() {
     const pageRef = useScrollReveal();
 
-    const urgentRequests = [
-        { id: 1, type: "A+", location: "Fortis Hospital, Mohali", time: "2 hrs ago", critical: true },
-        { id: 2, type: "O-", location: "PGI Chandigarh", time: "45 mins ago", critical: true },
-        { id: 3, type: "B+", location: "Max Hospital, Chandigarh", time: "1 hr ago", critical: false },
-    ];
+    const [stats, setStats] = useState(null);
+    const [urgentRequests, setUrgentRequests] = useState(null);
+
+    useEffect(() => {
+        api("/stats", { auth: false }).then(setStats).catch(() => setStats(null));
+        api("/requests", { query: { limit: 3 }, auth: false })
+            .then((r) => setUrgentRequests(r.data.map((x) => ({
+                id: x.id, type: x.bloodType, location: `${x.hospital}, ${x.city}`, time: timeAgo(x.createdAt), critical: x.urgency === "critical",
+            }))))
+            .catch(() => setUrgentRequests([]));
+    }, []);
 
     const benefits = [
         { icon: Heart, title: "Save Lives", desc: "A single donation can save up to 3 lives. Be someone's hero today.", color: "from-rose-500 to-crimson-600" },
         { icon: Activity, title: "Health Benefits", desc: "Regular donation reduces heart disease risk and stimulates new blood cell production.", color: "from-orange-500 to-amber-600" },
         { icon: Award, title: "Recognition", desc: "Earn badges, certificates, and climb the leaderboard as a lifesaving champion.", color: "from-yellow-500 to-orange-500" },
-        { icon: Users, title: "Community", desc: "Join 15,000+ donors in our growing network of compassionate individuals.", color: "from-crimson-500 to-rose-600" },
+        { icon: Users, title: "Community", desc: "Join a growing network of compassionate donors in your city.", color: "from-crimson-500 to-rose-600" },
     ];
 
     const testimonials = [
@@ -162,7 +177,7 @@ export default function Homepage() {
                                 ))}
                             </div>
                             <span>
-                                Trusted by <strong className="text-white">15,000+</strong> donors
+                                {stats?.donors ? <>Trusted by <strong className="text-white">{stats.donors.toLocaleString()}</strong> registered donors</> : <>Join our growing donor community</>}
                             </span>
                         </div>
                     </div>
@@ -190,8 +205,13 @@ export default function Homepage() {
                                     </div>
 
                                     <div className="space-y-3">
-                                        {urgentRequests.map((req, i) => (
-                                            <div
+                                        {urgentRequests === null && [0, 1, 2].map((i) => <div key={i} className="h-20 rounded-2xl bg-white/[0.03] animate-pulse" />)}
+                                        {urgentRequests?.length === 0 && (
+                                            <p className="text-sm text-white/40 text-center py-8">No open requests right now. Need blood? Post a request and we'll alert donors nearby.</p>
+                                        )}
+                                        {urgentRequests?.map((req, i) => (
+                                            <Link
+                                                to="/dashboard"
                                                 key={req.id}
                                                 className={`group flex items-center justify-between p-4 rounded-2xl transition-all duration-300 hover:bg-white/5 cursor-pointer ${i === 0 ? 'bg-crimson-600/10 border border-crimson-600/20' : 'bg-white/[0.03] border border-white/5'}`}
                                             >
@@ -212,15 +232,15 @@ export default function Homepage() {
                                                     </span>
                                                 )}
                                                 <ArrowUpRight className="h-4 w-4 text-white/20 group-hover:text-white/60 transition-colors duration-300" />
-                                            </div>
+                                            </Link>
                                         ))}
                                     </div>
 
                                     <Link
-                                        to="/find-donors"
+                                        to="/request-blood"
                                         className="block mt-6 text-center py-3.5 bg-gradient-to-r from-crimson-600 to-crimson-500 rounded-xl font-semibold text-sm hover:from-crimson-500 hover:to-crimson-400 transition-all duration-300 shadow-lg shadow-crimson-600/20"
                                     >
-                                        View All Requests →
+                                        Request Blood →
                                     </Link>
                                 </div>
                             </div>
@@ -260,10 +280,10 @@ export default function Homepage() {
                 <div className="relative max-w-7xl mx-auto px-6">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                         {[
-                            { value: 15847, suffix: "+", label: "Registered Donors", icon: Users },
-                            { value: 42391, suffix: "+", label: "Lives Saved", icon: Heart },
-                            { value: 156, suffix: "", label: "Partner Hospitals", icon: Globe },
-                            { value: 98, suffix: "%", label: "Success Rate", icon: TrendingUp },
+                            { value: stats?.donors || 0, suffix: "", label: "Registered Donors", icon: Users },
+                            { value: stats?.livesImpacted || 0, suffix: "", label: "Lives Impacted", icon: Heart },
+                            { value: stats?.cities || 0, suffix: "", label: "Cities Covered", icon: Globe },
+                            { value: stats?.requestsFulfilled || 0, suffix: "", label: "Requests Fulfilled", icon: TrendingUp },
                         ].map((stat, i) => (
                             <div
                                 key={i}
@@ -272,7 +292,7 @@ export default function Homepage() {
                                 <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-crimson-600/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                 <stat.icon className="h-6 w-6 text-crimson-500 mb-4" />
                                 <p className="text-4xl lg:text-5xl font-display font-black tracking-tight">
-                                    <AnimatedCounter end={stat.value} />
+                                    <AnimatedCounter key={stat.value} end={stat.value} />
                                     <span className="text-crimson-500">{stat.suffix}</span>
                                 </p>
                                 <p className="text-white/40 text-sm font-medium mt-2">{stat.label}</p>
