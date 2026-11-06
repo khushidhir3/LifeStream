@@ -5,6 +5,7 @@ import {
     Headphones, Globe
 } from "lucide-react";
 import { useScrollReveal } from "../hooks/useScrollReveal";
+import { api, isEmail, isPhone } from "../lib/api";
 
 export default function Contact() {
     const pageRef = useScrollReveal();
@@ -28,24 +29,28 @@ export default function Contact() {
 
     const validate = () => {
         const e = {};
-        if (!formData.name) e.name = "Required";
-        if (!formData.email) e.email = "Required";
-        if (!formData.message) e.message = "Required";
+        if (!formData.name.trim()) e.name = "Name is required";
+        if (!formData.email.trim()) e.email = "Email is required";
+        else if (!isEmail(formData.email)) e.email = "Enter a valid email address";
+        if (formData.phone && !isPhone(formData.phone)) e.phone = "Enter a valid phone number";
+        if (!formData.message.trim()) e.message = "Message is required";
+        else if (formData.message.trim().length < 10) e.message = "Please write at least 10 characters";
         setErrors(e);
         return Object.keys(e).length === 0;
     };
 
-    const handleSubmit = () => {
-        if (validate()) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setSubmitted(true);
-                setIsLoading(false);
-                setTimeout(() => {
-                    setSubmitted(false);
-                    setFormData({ name: "", email: "", phone: "", subject: "", message: "", inquiryType: "" });
-                }, 3000);
-            }, 1500);
+    const handleSubmit = async () => {
+        if (!validate()) return;
+        setIsLoading(true);
+        try {
+            await api("/contact", { method: "POST", body: formData, auth: false });
+            setSubmitted(true);
+            setFormData({ name: "", email: "", phone: "", subject: "", message: "", inquiryType: "" });
+            setTimeout(() => setSubmitted(false), 6000);
+        } catch (err) {
+            setErrors({ form: err.message, ...(err.field ? { [err.field]: err.message } : {}) });
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -145,7 +150,7 @@ export default function Contact() {
                                             </div>
                                             <div>
                                                 <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">Email *</label>
-                                                <input name="email" value={formData.email} onChange={handleChange} placeholder="you@email.com" className="input-premium" />
+                                                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="you@email.com" className="input-premium" />
                                                 {errors.email && <p className="text-crimson-400 text-xs mt-1">{errors.email}</p>}
                                             </div>
                                         </div>
@@ -153,7 +158,8 @@ export default function Contact() {
                                         <div className="grid md:grid-cols-2 gap-5">
                                             <div>
                                                 <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">Phone</label>
-                                                <input name="phone" value={formData.phone} onChange={handleChange} placeholder="+91 98765 43210" className="input-premium" />
+                                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="+91 98765 43210" className="input-premium" />
+                                                {errors.phone && <p className="text-crimson-400 text-xs mt-1">{errors.phone}</p>}
                                             </div>
                                             <div>
                                                 <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">Inquiry Type</label>
@@ -175,6 +181,7 @@ export default function Contact() {
                                             {errors.message && <p className="text-crimson-400 text-xs mt-1">{errors.message}</p>}
                                         </div>
 
+                                        {errors.form && <p role="alert" className="p-3 rounded-xl bg-crimson-600/10 border border-crimson-600/30 text-crimson-300 text-sm">{errors.form}</p>}
                                         <button
                                             onClick={handleSubmit}
                                             disabled={isLoading}
