@@ -1,11 +1,12 @@
 const config = require('../config');
-const { distanceKm, geocode } = require('../utils/geo');
+const { distanceKm, geocode, nominatim } = require('../utils/geo');
 
 // Blood bank / blood donation centre lookup from two external sources:
 //  1. data.gov.in (Government of India Open Data) – needs a free API key and the
 //     resource id of the "blood bank directory" dataset (set in .env).
-//  2. OpenStreetMap via the Overpass API – free, no key, works worldwide. Used when
-//     data.gov.in is not configured, or as a fallback when it fails.
+//  2. OpenStreetMap via Nominatim – free, no key. Used when data.gov.in is not
+//     configured, or as a fallback when it fails. Many Indian blood banks on
+//     OpenStreetMap carry phone, email, opening hours and government/private type.
 
 const cache = new Map();
 const TTL_MS = 6 * 60 * 60 * 1000;
@@ -60,54 +61,45 @@ async function searchDataGovIn({ state, city, limit }) {
   return (json.records || []).map(fromDataGovIn).filter((b) => b.name);
 }
 
-async function searchOverpass({ latitude, longitude, radiusKm }) {
-  const r = Math.round(Math.min(radiusKm, 100) * 1000);
-  const q = `[out:json][timeout:20];(
-    nwr["healthcare"="blood_donation"](around:${r},${latitude},${longitude});
-    nwr["amenity"="blood_bank"](around:${r},${latitude},${longitude});
-    nwr["healthcare"="blood_bank"](around:${r},${latitude},${longitude});
-  );out center 100;`;
-  // Public Overpass servers are sometimes busy, so try mirrors in turn.
-  const mirrors = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
-  let json = null;
-  let lastErr = null;
-  for (const url of mirrors) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'LifeStream-BloodDonorNetwork/1.0' },
-        body: `data=${encodeURIComponent(q)}`,
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!res.ok) throw new Error(`Overpass responded ${res.status}`);
-      json = await res.json();
-      break;
-    } catch (err) {
-      lastErr = err;
-    }
-  }
-  if (!json) throw lastErr || new Error('Blood bank lookup failed');
-  return (json.elements || [])
+const first = (...vals) => vals.find((x) => x && String(x).trim()) || null;
+const titleCase = (x) => (!x ? null : x.toLowerCase() === 'ngo' ? 'NGO' : x.charAt(0).toUpperCase() + x.slice(1));
+
+async function searchOpenStreetMap({ latitude, longitude, radiusKm }) {
+  const r = Math.min(Math.max(radiusKm, 1), 100);
+  const dLat = r / 111;
+  const dLng = r / (111 * Math.cos((latitude * Math.PI) / 180));
+  const rows = await nominatim({
+    q: 'blood bank',
+    limit: '40',
+    countrycodes: 'in',
+    viewbox: [longitude - dLng, latitude + dLat, longitude + dLng, latitude - dLat].join(','),
+    bounded: '1',
+    extratags: '1',
+    addressdetails: '1',
+  });
+  return (Array.isArray(rows) ? rows : [])
+    .filter((e) => ['blood_bank', 'blood_donation'].includes(e.type))
     .map((e) => {
-      const t = e.tags || {};
-      const lat = e.lat ?? e.center?.lat;
-      const lng = e.lon ?? e.center?.lon;
+      const t = e.extratags || {};
+      const a = e.address || {};
+      const kind = titleCase(t['operator:type']);
       return {
         source: 'openstreetmap',
-        name: t.name || t['name:en'] || 'Blood donation centre',
-        category: t.operator || t['operator:type'] || null,
-        address: [t['addr:housenumber'], t['addr:street'], t['addr:suburb']].filter(Boolean).join(', ') || null,
-        city: t['addr:city'] || null,
-        district: t['addr:district'] || null,
-        state: t['addr:state'] || null,
-        pincode: t['addr:postcode'] || null,
-        phone: t.phone || t['contact:phone'] || null,
-        email: t.email || t['contact:email'] || null,
-        website: t.website || t['contact:website'] || null,
-        latitude: lat ?? null,
-        longitude: lng ?? null,
+        name: e.name || 'Blood bank',
+        category: [kind, t.opening_hours === '24/7' ? 'Open 24/7' : null].filter(Boolean).join(' · ') || null,
+        address: [a.house_number, a.road, a.suburb || a.neighbourhood].filter(Boolean).join(', ') || null,
+        city: first(a.city, a.town, a.village),
+        district: first(a.state_district, a.county),
+        state: a.state || null,
+        pincode: a.postcode || null,
+        phone: first(t['contact:phone'], t.phone, t['contact:mobile'], t['contact:helpline']),
+        email: first(t['contact:email'], t.email),
+        website: first(t['contact:website'], t.website),
+        latitude: Number(e.lat),
+        longitude: Number(e.lon),
       };
-    });
+    })
+    .filter((b) => distanceKm(latitude, longitude, b.latitude, b.longitude) <= r);
 }
 
 async function searchBloodBanks({ state, city, latitude, longitude, radiusKm = 25, limit = 50 }) {
@@ -135,7 +127,7 @@ async function searchBloodBanks({ state, city, latitude, longitude, radiusKm = 2
     if (lat != null && lng != null) {
       try {
         const key = `osm:${lat.toFixed(2)}:${lng.toFixed(2)}:${radiusKm}`;
-        results = await cached(key, () => searchOverpass({ latitude: lat, longitude: lng, radiusKm }));
+        results = await cached(key, () => searchOpenStreetMap({ latitude: lat, longitude: lng, radiusKm }));
         source = 'openstreetmap';
       } catch (err) {
         errors.push(err.message);

@@ -106,6 +106,6 @@ curl -H "x-api-key: ls_live_XXXX" "https://api.example.com/api/v1/donors?compati
 ## External services
 
 - **OpenStreetMap Nominatim** – city/address → coordinates (free, no key).
-- **OpenStreetMap Overpass** – blood banks near a point (free, no key).
+- **OpenStreetMap Nominatim** – blood banks near a point, with phone, email, hours and government/private type where listed (free, no key, max 1 request/second; results cached 6 hours).
 - **data.gov.in** – Government of India blood bank directory, used first when its key and resource id are set.
 - **SMTP** – password reset and alert emails.
