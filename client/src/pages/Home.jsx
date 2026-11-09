@@ -95,11 +95,6 @@ export default function Homepage() {
         { icon: Users, title: "Community", desc: "Join a growing network of compassionate donors in your city.", color: "from-crimson-500 to-rose-600" },
     ];
 
-    const testimonials = [
-        { name: "Dr. Priya Sharma", role: "Hematologist, PGI Chandigarh", quote: "LifeStream has revolutionized how we source blood for emergency surgeries. The response time has improved by 60%.", avatar: "PS" },
-        { name: "Rajesh Kumar", role: "Regular Donor, 12 donations", quote: "The gamification aspect keeps me motivated. Seeing my 'Lives Impacted' counter go up is incredibly fulfilling.", avatar: "RK" },
-        { name: "Anjali Gupta", role: "Blood Bank Manager", quote: "Managing inventory has never been easier. Real-time tracking and alerts have eliminated critical shortages.", avatar: "AG" },
-    ];
 
     const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -142,8 +137,8 @@ export default function Homepage() {
                         </h1>
 
                         <p className="fade-up stagger-2 mt-6 text-lg text-white/50 leading-relaxed max-w-xl">
-                            One donation can be someone's second chance at life. Join India's fastest-growing
-                            blood donor network and become a hero in your community.
+                            One donation can be someone's second chance at life. Join a donor network that
+                            alerts you the moment someone nearby needs your blood group.
                         </p>
 
                         <div className="fade-up stagger-3 mt-10 flex flex-wrap gap-4">
@@ -382,49 +377,6 @@ export default function Homepage() {
                                         <ChevronRight className="h-6 w-6 text-white/10" />
                                     </div>
                                 )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ═══════════ TESTIMONIALS ═══════════ */}
-            <section className="relative py-24">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="text-center mb-16">
-                        <p className="fade-up text-crimson-500 text-sm font-semibold uppercase tracking-widest mb-3">
-                            Testimonials
-                        </p>
-                        <h2 className="fade-up stagger-1 text-4xl md:text-5xl font-display font-black tracking-tight">
-                            Voices of <span className="gradient-text">Our Community</span>
-                        </h2>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-6">
-                        {testimonials.map((t, i) => (
-                            <div
-                                key={i}
-                                className={`fade-up stagger-${i + 1} p-8 rounded-3xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all duration-500`}
-                            >
-                                <div className="flex gap-1 mb-6">
-                                    {[...Array(5)].map((_, j) => (
-                                        <Star key={j} className="h-4 w-4 text-amber-400" fill="currentColor" />
-                                    ))}
-                                </div>
-
-                                <p className="text-white/60 text-sm leading-relaxed mb-8 italic">
-                                    "{t.quote}"
-                                </p>
-
-                                <div className="flex items-center gap-4 pt-6 border-t border-white/5">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-crimson-500 to-crimson-700 flex items-center justify-center text-sm font-bold">
-                                        {t.avatar}
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-sm">{t.name}</p>
-                                        <p className="text-white/40 text-xs">{t.role}</p>
-                                    </div>
-                                </div>
                             </div>
                         ))}
                     </div>
