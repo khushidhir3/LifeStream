@@ -2,26 +2,178 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// SQLite for local/dev. For production, switch provider to "postgresql"
+// and point DATABASE_URL at a Postgres database. No other changes needed.
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  email    String  @unique
-  password String
-  role     String  @default("user")
-  donors   Donor[]
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  password          String
+  role              String    @default("user") // "user" | "admin"
+  firstName         String    @default("")
+  lastName          String    @default("")
+  phone             String?
+  isActive          Boolean   @default(true)
+  // Notification preferences
+  notifyEmail       Boolean   @default(true)
+  notifyRequests    Boolean   @default(true)
+  // Password reset (only a SHA-256 hash of the token is stored)
+  resetTokenHash    String?
+  resetTokenExpires DateTime?
+  tokenVersion      Int       @default(0) // bump to invalidate all existing JWTs
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  donor         Donor?
+  notifications Notification[]
+  requests      BloodRequest[]  @relation("RequestCreator")
+  apiKeys       ApiKey[]
 }
 
 model Donor {
+  id                Int       @id @default(autoincrement())
+  userId            Int?      @unique
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  email             String?
+  phone             String
+  bloodType         String
+  gender            String?
+  dateOfBirth       DateTime?
+  weight            Float?
+  address           String?
+  city              String
+  state             String?
+  zipCode           String?
+  latitude          Float?
+  longitude         Float?
+  isAvailable       Boolean   @default(true)
+  status            String    @default("pending") // "pending" | "verified" | "rejected"
+  lastDonationDate  DateTime?
+  medicalConditions String?
+  medications       String?
+  allergies         String?
+  emergencyName     String?
+  emergencyRelation String?
+  emergencyPhone    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  donations Donation[]
+  responses RequestResponse[]
+  assigned  BloodRequest[]    @relation("AssignedDonor")
+
+  @@index([bloodType])
+  @@index([city])
+}
+
+model Donation {
   id        Int      @id @default(autoincrement())
-  name      String?
-  bloodType String?
-  city      String?
-  contact   String?
+  donorId   Int
+  donor     Donor    @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  date      DateTime
+  location  String?
+  units     Int      @default(1)
+  notes     String?
+  verified  Boolean  @default(false)
   createdAt DateTime @default(now())
-  userId    Int?
-  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([donorId])
+}
+
+model BloodRequest {
+  id              Int       @id @default(autoincrement())
+  patientName     String
+  bloodType       String
+  units           Int       @default(1)
+  hospital        String
+  city            String
+  latitude        Float?
+  longitude       Float?
+  urgency         String    @default("routine") // "routine" | "high" | "critical"
+  status          String    @default("pending") // "pending" | "assigned" | "completed" | "cancelled"
+  contactName     String
+  contactPhone    String
+  contactEmail    String?
+  notes           String?
+  neededBy        DateTime?
+  createdById     Int?
+  createdBy       User?     @relation("RequestCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  assignedDonorId Int?
+  assignedDonor   Donor?    @relation("AssignedDonor", fields: [assignedDonorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  responses RequestResponse[]
+
+  @@index([status])
+  @@index([bloodType])
+}
+
+model RequestResponse {
+  id        Int          @id @default(autoincrement())
+  requestId Int
+  request   BloodRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  donorId   Int
+  donor     Donor        @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  message   String?
+  createdAt DateTime     @default(now())
+
+  @@unique([requestId, donorId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("info") // "info" | "request" | "response" | "account"
+  title     String
+  message   String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model Inventory {
+  id        Int      @id @default(autoincrement())
+  bloodType String   @unique
+  units     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model ContactMessage {
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String
+  phone       String?
+  subject     String?
+  inquiryType String?
+  message     String
+  status      String   @default("new") // "new" | "read" | "resolved"
+  createdAt   DateTime @default(now())
+}
+
+// Keys for the partner/public API (/api/v1). Only a hash of the key is stored.
+model ApiKey {
+  id           Int       @id @default(autoincrement())
+  name         String
+  prefix       String
+  keyHash      String    @unique
+  ownerId      Int?
+  owner        User?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  active       Boolean   @default(true)
+  canViewContacts Boolean @default(false) // partner may see donor phone/email
+  requestCount Int       @default(0)
+  dailyLimit   Int       @default(1000)
+  usageDay     String? // YYYY-MM-DD the usageToday counter belongs to
+  usageToday   Int       @default(0)
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
 }

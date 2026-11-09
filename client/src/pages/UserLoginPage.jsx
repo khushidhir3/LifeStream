@@ -1,10 +1,15 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, Heart, Droplet, ArrowRight } from "lucide-react";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Mail, Lock, Eye, EyeOff, Heart, Droplet, ArrowRight, AlertCircle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { isEmail } from "../lib/api";
 
 export default function UserLogin() {
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({ email: "", password: "", rememberMe: false });
+    const location = useLocation();
+    const { login, isAuthenticated, isAdmin } = useAuth();
+    const [formData, setFormData] = useState({ email: "", password: "", rememberMe: true });
+    const [formError, setFormError] = useState("");
     const [errors, setErrors] = useState({});
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -13,25 +18,34 @@ export default function UserLogin() {
         const { name, value, type, checked } = e.target;
         setFormData((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
         setErrors((p) => ({ ...p, [name]: "" }));
+        setFormError("");
     };
 
     const validate = () => {
         const e = {};
-        if (!formData.email) e.email = "Required";
-        if (!formData.password) e.password = "Required";
+        if (!formData.email) e.email = "Email is required";
+        else if (!isEmail(formData.email)) e.email = "Enter a valid email address";
+        if (!formData.password) e.password = "Password is required";
         setErrors(e);
         return Object.keys(e).length === 0;
     };
 
-    const handleSubmit = () => {
-        if (validate()) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setIsLoading(false);
-                navigate("/user-dashboard");
-            }, 1500);
+    const handleSubmit = async (e) => {
+        e?.preventDefault();
+        if (!validate()) return;
+        setIsLoading(true);
+        try {
+            const data = await login({ email: formData.email.trim(), password: formData.password, remember: formData.rememberMe });
+            const dest = data.user.role === "admin" ? "/admin-dashboard" : location.state?.from || "/dashboard";
+            navigate(dest, { replace: true });
+        } catch (err) {
+            setFormError(err.message);
+        } finally {
+            setIsLoading(false);
         }
     };
+
+    if (isAuthenticated) return <Navigate to={isAdmin ? "/admin-dashboard" : "/dashboard"} replace />;
 
     return (
         <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4 relative overflow-hidden">
@@ -67,12 +81,17 @@ export default function UserLogin() {
                                 <p className="text-white/40 text-sm mt-1">Sign in to your donor account</p>
                             </div>
 
-                            <div className="space-y-5">
+                            <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                                {formError && (
+                                    <div role="alert" className="flex items-start gap-2 p-3 rounded-xl bg-crimson-600/10 border border-crimson-600/30 text-crimson-300 text-sm">
+                                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /> {formError}
+                                    </div>
+                                )}
                                 <div>
                                     <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">Email</label>
                                     <div className="relative">
                                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                                        <input name="email" value={formData.email} onChange={handleChange} placeholder="you@lifestream.com" className="input-premium pl-11" />
+                                        <input type="email" name="email" autoComplete="email" value={formData.email} onChange={handleChange} placeholder="you@example.com" className="input-premium pl-11" />
                                     </div>
                                     {errors.email && <p className="text-crimson-400 text-xs mt-1">{errors.email}</p>}
                                 </div>
@@ -81,8 +100,8 @@ export default function UserLogin() {
                                     <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">Password</label>
                                     <div className="relative">
                                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                                        <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" className="input-premium pl-11 pr-12" />
-                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+                                        <input type={showPassword ? "text" : "password"} name="password" autoComplete="current-password" value={formData.password} onChange={handleChange} placeholder="••••••••" className="input-premium pl-11 pr-12" />
+                                        <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
                                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                         </button>
                                     </div>
@@ -94,11 +113,11 @@ export default function UserLogin() {
                                         <input type="checkbox" name="rememberMe" checked={formData.rememberMe} onChange={handleChange} className="w-4 h-4 rounded border-white/20 bg-white/5 text-crimson-600 focus:ring-crimson-500" />
                                         Remember me
                                     </label>
-                                    <a href="#" className="text-crimson-400 hover:text-crimson-300 transition-colors text-xs font-medium">Forgot password?</a>
+                                    <Link to="/forgot-password" className="text-crimson-400 hover:text-crimson-300 transition-colors text-xs font-medium">Forgot password?</Link>
                                 </div>
 
                                 <button
-                                    onClick={handleSubmit}
+                                    type="submit"
                                     disabled={isLoading}
                                     className={`group w-full py-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-300 ${isLoading ? "bg-white/10 text-white/40 cursor-not-allowed" : "bg-gradient-to-r from-crimson-600 to-crimson-500 text-white hover:from-crimson-500 hover:to-crimson-400 shadow-lg shadow-crimson-600/20 hover:shadow-crimson-500/30 hover:-translate-y-0.5"}`}
                                 >
@@ -119,7 +138,7 @@ export default function UserLogin() {
                                         <Link to="/admin-login" className="text-white/50 font-medium hover:text-white/70 transition-colors">Admin Login →</Link>
                                     </p>
                                 </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
                 </div>

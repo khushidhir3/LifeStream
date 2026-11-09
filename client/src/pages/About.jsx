@@ -17,18 +17,11 @@ export default function About() {
     ];
 
     const milestones = [
-        { year: "2020", title: "Founded", desc: "Started with 50 donors in Chandigarh" },
-        { year: "2021", title: "1,000 Donors", desc: "Expanded to tri-city region" },
-        { year: "2022", title: "10,000 Lives", desc: "Crossed 10,000 lives saved milestone" },
-        { year: "2023", title: "100+ Hospitals", desc: "Partnered with hospitals across North India" },
-        { year: "2024", title: "15,000+ Donors", desc: "India's fastest-growing blood network" },
-    ];
-
-    const team = [
-        { name: "Dr. Meera Patel", role: "Chief Medical Advisor", initials: "MP" },
-        { name: "Arjun Kapoor", role: "Founder & CEO", initials: "AK" },
-        { name: "Sanya Malhotra", role: "Head of Operations", initials: "SM" },
-        { name: "Ravi Sharma", role: "Lead Developer", initials: "RS" },
+        { year: "Step 1", title: "Donors register", desc: "Eligibility is checked against national blood transfusion guidelines" },
+        { year: "Step 2", title: "Someone needs blood", desc: "A hospital or family posts a request, on the site or through the partner API" },
+        { year: "Step 3", title: "Nearby donors are alerted", desc: "Compatible, eligible donors within 50 km get notified instantly" },
+        { year: "Step 4", title: "Donors respond", desc: "The requester gets the donor's contact; contact details stay private until then" },
+        { year: "Step 5", title: "Donation is recorded", desc: "The donor's history and next eligible date update automatically" },
     ];
 
     return (
@@ -121,9 +114,9 @@ export default function About() {
             <section className="py-24 border-y border-white/5">
                 <div className="max-w-4xl mx-auto px-6">
                     <div className="text-center mb-16">
-                        <p className="fade-up text-crimson-500 text-sm font-semibold uppercase tracking-widest mb-3">Our Journey</p>
+                        <p className="fade-up text-crimson-500 text-sm font-semibold uppercase tracking-widest mb-3">How It Works</p>
                         <h2 className="fade-up stagger-1 text-4xl md:text-5xl font-display font-black tracking-tight">
-                            The <span className="gradient-text">LifeStream</span> Timeline
+                            From Request to <span className="gradient-text">Donor</span>
                         </h2>
                     </div>
 
@@ -146,33 +139,6 @@ export default function About() {
                                 </div>
 
                                 <div className="flex-1 hidden md:block" />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ═══════════ TEAM ═══════════ */}
-            <section className="py-24">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="text-center mb-16">
-                        <p className="fade-up text-crimson-500 text-sm font-semibold uppercase tracking-widest mb-3">Our Team</p>
-                        <h2 className="fade-up stagger-1 text-4xl md:text-5xl font-display font-black tracking-tight">
-                            Meet the <span className="gradient-text">Heroes Behind</span>
-                        </h2>
-                    </div>
-
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                        {team.map((t, i) => (
-                            <div
-                                key={i}
-                                className={`fade-up stagger-${i + 1} group p-8 rounded-3xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all duration-500 text-center`}
-                            >
-                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-crimson-500 to-crimson-700 mx-auto mb-6 flex items-center justify-center text-2xl font-bold group-hover:scale-110 transition-transform duration-500 shadow-xl shadow-crimson-600/20">
-                                    {t.initials}
-                                </div>
-                                <h4 className="font-display font-bold">{t.name}</h4>
-                                <p className="text-white/40 text-sm mt-1">{t.role}</p>
                             </div>
                         ))}
                     </div>

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Droplet, Menu, X } from "lucide-react";
+import { Droplet, Menu, X, LayoutDashboard } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const location = useLocation();
+    const { user, isAdmin, isAuthenticated } = useAuth();
+    const dashboardPath = isAdmin ? "/admin-dashboard" : "/dashboard";
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 20);
@@ -13,14 +16,18 @@ export default function Navbar() {
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
-    useEffect(() => {
+    // Close the mobile menu after navigating.
+    const [prevPath, setPrevPath] = useState(location.pathname);
+    if (location.pathname !== prevPath) {
+        setPrevPath(location.pathname);
         setMobileOpen(false);
-    }, [location]);
+    }
 
     const links = [
         { to: "/", label: "Home" },
         { to: "/about", label: "About" },
         { to: "/find-donors", label: "Find Donors" },
+        { to: "/request-blood", label: "Request Blood" },
         { to: "/contact", label: "Contact" },
     ];
 
@@ -71,6 +78,14 @@ export default function Navbar() {
 
                 {/* Desktop CTA */}
                 <div className="hidden md:flex items-center gap-3">
+                    {isAuthenticated ? (
+                        <Link to={dashboardPath} className="flex items-center gap-2 pl-2 pr-5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+                            <span className="w-8 h-8 rounded-full bg-gradient-to-br from-crimson-500 to-crimson-700 flex items-center justify-center text-xs font-bold">
+                                {(user.firstName || user.email)[0].toUpperCase()}
+                            </span>
+                            <span className="text-sm font-semibold">{isAdmin ? "Admin panel" : "My dashboard"}</span>
+                        </Link>
+                    ) : (<>
                     <Link
                         to="/login"
                         className="px-5 py-2.5 text-sm font-semibold text-white/80 hover:text-white transition-colors duration-300"
@@ -83,11 +98,13 @@ export default function Navbar() {
                     >
                         Become a Donor
                     </Link>
+                    </>)}
                 </div>
 
                 {/* Mobile toggle */}
                 <button
                     onClick={() => setMobileOpen(!mobileOpen)}
+                    aria-label="Toggle menu"
                     className="md:hidden text-white p-2"
                 >
                     {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -97,7 +114,7 @@ export default function Navbar() {
             {/* Mobile Menu */}
             <div
                 className={`md:hidden overflow-hidden transition-all duration-500 ease-out ${
-                    mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                    mobileOpen ? "max-h-[32rem] opacity-100" : "max-h-0 opacity-0"
                 }`}
             >
                 <div className="px-6 py-4 space-y-2 glass-dark mt-2 mx-4 rounded-2xl">
@@ -114,6 +131,13 @@ export default function Navbar() {
                             {link.label}
                         </Link>
                     ))}
+                    {isAuthenticated ? (
+                        <div className="pt-3 border-t border-white/10">
+                            <Link to={dashboardPath} className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold bg-gradient-to-r from-crimson-600 to-crimson-500 text-white rounded-xl">
+                                <LayoutDashboard className="h-4 w-4" /> {isAdmin ? "Admin panel" : "My dashboard"}
+                            </Link>
+                        </div>
+                    ) : (
                     <div className="flex gap-3 pt-3 border-t border-white/10">
                         <Link
                             to="/login"
@@ -128,6 +152,7 @@ export default function Navbar() {
                             Register
                         </Link>
                     </div>
+                    )}
                 </div>
             </div>
         </nav>

@@ -2,6 +2,13 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Droplet, Heart, Phone, Mail, MapPin, ArrowUpRight, Github, Twitter, Instagram } from "lucide-react";
 
+// Social links only render when configured (VITE_GITHUB_URL, VITE_TWITTER_URL, VITE_INSTAGRAM_URL).
+const SOCIALS = [
+    { Icon: Github, href: import.meta.env.VITE_GITHUB_URL, label: "GitHub" },
+    { Icon: Twitter, href: import.meta.env.VITE_TWITTER_URL, label: "Twitter" },
+    { Icon: Instagram, href: import.meta.env.VITE_INSTAGRAM_URL, label: "Instagram" },
+].filter((s) => s.href);
+
 export default function Footer() {
     return (
         <footer className="relative bg-[#0a0a0f] text-white overflow-hidden">
@@ -46,10 +53,13 @@ export default function Footer() {
                             Connecting donors with those in need. Every drop matters, every donor is a hero.
                         </p>
                         <div className="flex gap-3">
-                            {[Github, Twitter, Instagram].map((Icon, i) => (
+                            {SOCIALS.map(({ Icon, href, label }) => (
                                 <a
-                                    key={i}
-                                    href="#"
+                                    key={label}
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label={label}
                                     className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-crimson-600 transition-all duration-300 hover:-translate-y-0.5"
                                 >
                                     <Icon className="h-4 w-4 text-white/50 hover:text-white" />
@@ -89,18 +99,19 @@ export default function Footer() {
                             Resources
                         </h4>
                         <ul className="space-y-3">
-                            {["Eligibility", "Blood Types Guide", "Donation Process", "Health Tips", "FAQs"].map(
-                                (label) => (
-                                    <li key={label}>
-                                        <a
-                                            href="#"
-                                            className="text-white/50 hover:text-white text-sm transition-colors duration-300"
-                                        >
-                                            {label}
-                                        </a>
-                                    </li>
-                                )
-                            )}
+                            {[
+                                { to: "/request-blood", label: "Request Blood" },
+                                { to: "/find-donors", label: "Find Blood Banks" },
+                                { to: "/about", label: "Eligibility & Process" },
+                                { to: "/terms", label: "Terms of Service" },
+                                { to: "/privacy", label: "Privacy Policy" },
+                            ].map((link) => (
+                                <li key={link.label}>
+                                    <Link to={link.to} className="text-white/50 hover:text-white text-sm transition-colors duration-300">
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            ))}
                         </ul>
                     </div>
 
@@ -139,7 +150,7 @@ export default function Footer() {
                 <div className="border-t border-white/5">
                     <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
                         <p className="text-white/30 text-xs">
-                            © 2024 LifeStream. All rights reserved. Every drop saves a life.
+                            © {new Date().getFullYear()} LifeStream. All rights reserved. Every drop saves a life.
                         </p>
                         <div className="flex items-center gap-1 text-white/30 text-xs">
                             Made with <Heart className="h-3 w-3 text-crimson-500 mx-1 heartbeat" fill="currentColor" /> for humanity
